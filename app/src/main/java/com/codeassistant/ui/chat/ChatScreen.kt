@@ -6,7 +6,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -36,7 +35,6 @@ fun ChatScreen(
     val listState = rememberLazyListState()
     var showDrawer by remember { mutableStateOf(false) }
     
-    // 自动滚动到底部
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
             listState.animateScrollToItem(messages.size - 1)
@@ -65,7 +63,7 @@ fun ChatScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Code Assistant") },
+                title = { Text("Assistant") },
                 navigationIcon = {
                     IconButton(onClick = { showDrawer = true }) {
                         Icon(Icons.Default.Menu, contentDescription = "对话历史")
@@ -84,7 +82,6 @@ fun ChatScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // 消息列表
             LazyColumn(
                 state = listState,
                 modifier = Modifier
@@ -101,10 +98,7 @@ fun ChatScreen(
                                 .padding(vertical = 48.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = "开始新对话",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Text("开始新对话", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 } else {
@@ -133,7 +127,6 @@ fun ChatScreen(
                 }
             }
             
-            // 输入区域
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shadowElevation = 8.dp
@@ -163,10 +156,7 @@ fun ChatScreen(
                         onClick = onSend,
                         enabled = currentInput.isNotBlank() && !isLoading
                     ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.Send,
-                            contentDescription = "发送"
-                        )
+                        Icon(Icons.Default.Send, contentDescription = "发送")
                     }
                 }
             }
@@ -186,23 +176,14 @@ fun MessageBubble(message: Message) {
     ) {
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = if (isUser) 
-                MaterialTheme.colorScheme.primary 
-            else 
-                MaterialTheme.colorScheme.surfaceVariant,
+            color = if (isUser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
             modifier = Modifier.widthIn(max = 300.dp)
         ) {
-            Column(
-                modifier = Modifier.padding(12.dp)
-            ) {
-                Text(
-                    text = message.content,
-                    color = if (isUser) 
-                        MaterialTheme.colorScheme.onPrimary 
-                    else 
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            Text(
+                text = message.content,
+                modifier = Modifier.padding(12.dp),
+                color = if (isUser) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -216,40 +197,30 @@ fun ChatDrawerContent(
     onDeleteConversation: (Long) -> Unit,
     onClose: () -> Unit
 ) {
-    Column(
-        modifier = Modifier.fillMaxHeight()
-    ) {
+    Column(modifier = Modifier.fillMaxHeight()) {
         Surface(
             modifier = Modifier.fillMaxWidth(),
             color = MaterialTheme.colorScheme.primaryContainer
         ) {
-            Row(
-                modifier = Modifier.padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "对话历史",
-                    style = MaterialTheme.typography.titleMedium
-                )
-            }
+            Text(
+                text = "对话历史",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(16.dp)
+            )
         }
         
         FilledTonalButton(
             onClick = onNewConversation,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
+            modifier = Modifier.fillMaxWidth().padding(16.dp)
         ) {
             Icon(Icons.Default.Add, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
             Text("新建对话")
         }
         
-        HorizontalDivider()
+        Divider()
         
-        LazyColumn(
-            modifier = Modifier.weight(1f)
-        ) {
+        LazyColumn(modifier = Modifier.weight(1f)) {
             items(conversations) { conversation ->
                 ConversationItem(
                     conversation = conversation,
@@ -262,9 +233,7 @@ fun ChatDrawerContent(
         
         TextButton(
             onClick = onClose,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
+            modifier = Modifier.fillMaxWidth().padding(16.dp)
         ) {
             Text("关闭")
         }
@@ -287,9 +256,7 @@ fun ConversationItem(
         color = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
     ) {
         Row(
-            modifier = Modifier
-                .padding(horizontal = 16.dp, vertical = 12.dp)
-                .fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -301,11 +268,7 @@ fun ConversationItem(
             )
             
             IconButton(onClick = { showDeleteDialog = true }) {
-                Icon(
-                    Icons.Default.Delete,
-                    contentDescription = "删除",
-                    tint = MaterialTheme.colorScheme.error
-                )
+                Icon(Icons.Default.Delete, contentDescription = "删除", tint = MaterialTheme.colorScheme.error)
             }
         }
     }
@@ -316,19 +279,12 @@ fun ConversationItem(
             title = { Text("删除对话") },
             text = { Text("确定要删除这个对话吗？") },
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        onDelete()
-                        showDeleteDialog = false
-                    }
-                ) {
+                TextButton(onClick = { showDeleteDialog = false; onDelete() }) {
                     Text("删除", color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("取消")
-                }
+                TextButton(onClick = { showDeleteDialog = false }) { Text("取消") }
             }
         )
     }
