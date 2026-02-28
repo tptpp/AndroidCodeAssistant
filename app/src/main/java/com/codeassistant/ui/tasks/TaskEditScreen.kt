@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.codeassistant.data.model.*
@@ -86,7 +87,6 @@ fun TaskEditScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 任务名称
             OutlinedTextField(
                 value = title,
                 onValueChange = { title = it },
@@ -96,7 +96,6 @@ fun TaskEditScreen(
                 singleLine = true
             )
             
-            // 提示词
             OutlinedTextField(
                 value = prompt,
                 onValueChange = { prompt = it },
@@ -109,7 +108,6 @@ fun TaskEditScreen(
             
             Divider(modifier = Modifier.padding(vertical = 8.dp))
             
-            // 任务类型
             Text("任务类型", style = MaterialTheme.typography.titleMedium)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(
@@ -124,7 +122,6 @@ fun TaskEditScreen(
                 )
             }
             
-            // 定时任务设置
             if (taskType == TaskType.SCHEDULED) {
                 Text("执行频率", style = MaterialTheme.typography.titleMedium)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -142,29 +139,21 @@ fun TaskEditScreen(
                 
                 Text("执行时间", style = MaterialTheme.typography.titleMedium)
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Column {
-                        OutlinedTextField(
-                            value = hour.toString(),
-                            onValueChange = { hour = it.toIntOrNull()?.coerceIn(0, 23) ?: hour },
-                            label = { Text("时") },
-                            modifier = Modifier.width(80.dp),
-                            singleLine = true
-                        )
-                    }
+                    OutlinedTextField(
+                        value = hour.toString(),
+                        onValueChange = { hour = it.toIntOrNull()?.coerceIn(0, 23) ?: hour },
+                        label = { Text("时") },
+                        modifier = Modifier.width(80.dp),
+                        singleLine = true
+                    )
                     Text(":", style = MaterialTheme.typography.headlineMedium)
-                    Column {
-                        OutlinedTextField(
-                            value = minute.toString().padStart(2, '0'),
-                            onValueChange = { minute = it.toIntOrNull()?.coerceIn(0, 59) ?: minute },
-                            label = { Text("分") },
-                            modifier = Modifier.width(80.dp),
-                            singleLine = true
-                        )
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        AssistChip(onClick = { hour = 9; minute = 0 }, label = { Text("9:00") })
-                        AssistChip(onClick = { hour = 18; minute = 0 }, label = { Text("18:00") })
-                    }
+                    OutlinedTextField(
+                        value = minute.toString().padStart(2, '0'),
+                        onValueChange = { minute = it.toIntOrNull()?.coerceIn(0, 59) ?: minute },
+                        label = { Text("分") },
+                        modifier = Modifier.width(80.dp),
+                        singleLine = true
+                    )
                 }
                 
                 if (frequency == ScheduleFrequency.WEEKLY) {
@@ -186,61 +175,48 @@ fun TaskEditScreen(
                 }
             }
             
-            // 预设模板
             Divider(modifier = Modifier.padding(vertical = 8.dp))
             Text("快速模板", style = MaterialTheme.typography.titleMedium)
             
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                QuickTemplate(
-                    title = "每日新闻",
+                OutlinedCard(
                     onClick = {
                         title = "每日新闻摘要"
                         prompt = "请总结今天的科技新闻，列出5条最重要的"
                         taskType = TaskType.SCHEDULED
                         frequency = ScheduleFrequency.DAILY
                         hour = 9
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("每日新闻", style = MaterialTheme.typography.bodyLarge)
                     }
-                )
-                QuickTemplate(
-                    title = "周报提醒",
-                    onClick = {
-                        title = "周报提醒"
-                        prompt = "提醒我写周报，并帮我生成周报模板"
-                        taskType = TaskType.SCHEDULED
-                        frequency = ScheduleFrequency.WEEKLY
-                        hour = 18
-                        selectedDays = listOf(6) // 周五
-                    }
-                )
-                QuickTemplate(
-                    title = "提醒事项",
+                }
+                
+                OutlinedCard(
                     onClick = {
                         title = "提醒事项"
                         prompt = "提醒我完成待办事项"
                         taskType = TaskType.ONE_TIME
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("提醒事项", style = MaterialTheme.typography.bodyLarge)
                     }
-                )
+                }
             }
-        }
-    }
-}
-
-@Composable
-fun QuickTemplate(
-    title: String,
-    onClick: () -> Unit
-) {
-    OutlinedCard(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(Icons.Default.Add, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(title, style = MaterialTheme.typography.bodyLarge)
         }
     }
 }

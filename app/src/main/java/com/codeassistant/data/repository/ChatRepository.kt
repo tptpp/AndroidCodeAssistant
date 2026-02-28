@@ -67,8 +67,8 @@ class ChatRepository {
             val service = apiService ?: return@withContext Result.failure(Exception("API not configured"))
             val response = service.chat(request)
             
-            if (response.isSuccessful) {
-                val content = response.body()?.choices?.firstOrNull()?.message?.content ?: ""
+            if (response.isSuccessful && response.body() != null) {
+                val content = response.body()!!.choices.firstOrNull()?.message?.content ?: ""
                 Result.success(content)
             } else {
                 Result.failure(Exception("API error: ${response.code()}"))
