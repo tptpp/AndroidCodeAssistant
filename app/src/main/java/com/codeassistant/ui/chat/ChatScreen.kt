@@ -1,6 +1,5 @@
 package com.codeassistant.ui.chat
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -8,14 +7,14 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.codeassistant.data.model.Conversation
 import com.codeassistant.data.model.Message
 import com.codeassistant.data.model.MessageRole
 
@@ -27,10 +26,15 @@ fun ChatScreen(
     currentInput: String,
     onInputChange: (String) -> Unit,
     onSend: () -> Unit,
-    onOpenDrawer: () -> Unit,
-    onOpenSettings: () -> Unit
+    conversations: List<Conversation>,
+    currentConversationId: Long?,
+    onSelectConversation: (Long) -> Unit,
+    onNewConversation: () -> Unit,
+    onDeleteConversation: (Long) -> Unit,
+    onNavigateToSettings: () -> Unit
 ) {
     val listState = rememberLazyListState()
+    var showDrawer by remember { mutableStateOf(false) }
     
     // 自动滚动到底部
     LaunchedEffect(messages.size) {
@@ -39,17 +43,36 @@ fun ChatScreen(
         }
     }
     
+    if (showDrawer) {
+        ModalDrawerSheet {
+            ChatDrawerContent(
+                conversations = conversations,
+                currentConversationId = currentConversationId,
+                onSelectConversation = { 
+                    onSelectConversation(it)
+                    showDrawer = false
+                },
+                onNewConversation = {
+                    onNewConversation()
+                    showDrawer = false
+                },
+                onDeleteConversation = onDeleteConversation,
+                onClose = { showDrawer = false }
+            )
+        }
+    }
+    
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Code Assistant") },
                 navigationIcon = {
-                    IconButton(onClick = onOpenDrawer) {
-                        Icon(Icons.Default.Menu, contentDescription = "菜单")
+                    IconButton(onClick = { showDrawer = true }) {
+                        Icon(Icons.Default.Menu, contentDescription = "对话历史")
                     }
                 },
                 actions = {
-                    IconButton(onClick = onOpenSettings) {
+                    IconButton(onClick = onNavigateToSettings) {
                         Icon(Icons.Default.Settings, contentDescription = "设置")
                     }
                 }
@@ -70,8 +93,24 @@ fun ChatScreen(
                     .padding(horizontal = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(messages, key = { it.id }) { message ->
-                    MessageBubble(message = message)
+                if (messages.isEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 48.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "开始新对话",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                } else {
+                    items(messages, key = { it.id }) { message ->
+                        MessageBubble(message = message)
+                    }
                 }
                 
                 if (isLoading) {
@@ -165,5 +204,132 @@ fun MessageBubble(message: Message) {
                 )
             }
         }
+    }
+}
+
+@Composable
+fun ChatDrawerContent(
+    conversations: List<Conversation>,
+    currentConversationId: Long?,
+    onSelectConversation: (Long) -> Unit,
+    onNewConversation: () -> Unit,
+    onDeleteConversation: (Long) -> Unit,
+    onClose: () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxHeight()
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.primaryContainer
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "对话历史",
+                    style = MaterialTheme.typography.titleMedium
+                )
+            }
+        }
+        
+        FilledTonalButton(
+            onClick = onNewConversation,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Icon(Icons.Default.Add, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("新建对话")
+        }
+        
+        HorizontalDivider()
+        
+        LazyColumn(
+            modifier = Modifier.weight(1f)
+        ) {
+            items(conversations) { conversation ->
+                ConversationItem(
+                    conversation = conversation,
+                    isSelected = conversation.id == currentConversationId,
+                    onSelect = { onSelectConversation(conversation.id) },
+                    onDelete = { onDeleteConversation(conversation.id) }
+                )
+            }
+        }
+        
+        TextButton(
+            onClick = onClose,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Text("关闭")
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ConversationItem(
+    conversation: Conversation,
+    isSelected: Boolean,
+    onSelect: () -> Unit,
+    onDelete: () -> Unit
+) {
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onSelect,
+        color = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = conversation.title,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                modifier = Modifier.weight(1f)
+            )
+            
+            IconButton(onClick = { showDeleteDialog = true }) {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = "删除",
+                    tint = MaterialTheme.colorScheme.error
+                )
+            }
+        }
+    }
+    
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("删除对话") },
+            text = { Text("确定要删除这个对话吗？") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onDelete()
+                        showDeleteDialog = false
+                    }
+                ) {
+                    Text("删除", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("取消")
+                }
+            }
+        )
     }
 }
