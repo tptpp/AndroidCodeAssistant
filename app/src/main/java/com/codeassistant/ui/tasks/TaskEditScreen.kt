@@ -107,7 +107,7 @@ fun TaskEditScreen(
                 placeholder = { Text("AI 将执行的内容...") }
             )
             
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            Divider(modifier = Modifier.padding(vertical = 8.dp))
             
             // 任务类型
             Text("任务类型", style = MaterialTheme.typography.titleMedium)
@@ -187,7 +187,7 @@ fun TaskEditScreen(
             }
             
             // 预设模板
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            Divider(modifier = Modifier.padding(vertical = 8.dp))
             Text("快速模板", style = MaterialTheme.typography.titleMedium)
             
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -87,7 +87,7 @@ fun ExecutionCard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = execution.taskName,
+                    text = execution.taskTitle,
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -176,7 +176,7 @@ fun ExecutionDetailDialog(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = execution.taskName,
+                        text = execution.taskTitle,
                         style = MaterialTheme.typography.titleLarge
                     )
                     TextButton(onClick = onDismiss) {
@@ -184,7 +184,7 @@ fun ExecutionDetailDialog(
                     }
                 }
                 
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                Divider(modifier = Modifier.padding(vertical = 8.dp))
                 
                 // 执行信息
                 Text(

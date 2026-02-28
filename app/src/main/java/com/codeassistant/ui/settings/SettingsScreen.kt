@@ -71,7 +71,7 @@ fun SettingsScreen(
                 )
             }
             
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            Divider(modifier = Modifier.padding(vertical = 8.dp))
             
             // API Key
             OutlinedTextField(
@@ -112,7 +112,7 @@ fun SettingsScreen(
                 singleLine = true
             )
             
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            Divider(modifier = Modifier.padding(vertical = 8.dp))
             
             // 高级设置
             Text(
