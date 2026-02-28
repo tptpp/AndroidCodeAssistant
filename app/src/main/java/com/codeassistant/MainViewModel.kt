@@ -1,7 +1,6 @@
 package com.codeassistant
 
 import android.app.Application
-import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.codeassistant.data.database.AppDatabase
@@ -10,6 +9,7 @@ import com.codeassistant.data.repository.ChatRepository
 import com.codeassistant.data.repository.SettingsRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.util.Calendar
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     
@@ -30,11 +30,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val conversations: Flow<List<Conversation>> = conversationDao.getAllConversations()
     
     val messages: Flow<List<Message>> = _currentConversationId.flatMapLatest { id ->
-        if (id != null) {
-            messageDao.getMessagesByConversation(id)
-        } else {
-            flowOf(emptyList())
-        }
+        if (id != null) messageDao.getMessagesByConversation(id) else flowOf(emptyList())
     }
     
     private val _inputText = MutableStateFlow("")
@@ -49,24 +45,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     
     // ========== 任务相关 ==========
     
-    val tasks: Flow<List<ScheduledTask>> = taskDao.getAllTasks()
+    val tasks: Flow<List<Task>> = taskDao.getAllTasks()
     
     val executions: Flow<List<TaskExecution>> = taskExecutionDao.getAllExecutions()
     
     // ========== 对话方法 ==========
     
-    fun setInputText(text: String) {
-        _inputText.value = text
-    }
+    fun setInputText(text: String) { _inputText.value = text }
     
-    fun selectConversation(id: Long) {
-        _currentConversationId.value = id
-    }
+    fun selectConversation(id: Long) { _currentConversationId.value = id }
     
     fun createNewConversation() {
         viewModelScope.launch {
-            val conversation = Conversation(title = "新对话")
-            val id = conversationDao.insertConversation(conversation)
+            val id = conversationDao.insertConversation(Conversation(title = "新对话"))
             _currentConversationId.value = id
         }
     }
@@ -75,9 +66,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             messageDao.deleteMessagesByConversation(id)
             conversationDao.deleteConversationById(id)
-            if (_currentConversationId.value == id) {
-                _currentConversationId.value = null
-            }
+            if (_currentConversationId.value == id) _currentConversationId.value = null
         }
     }
     
@@ -85,52 +74,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val text = _inputText.value.trim()
         if (text.isEmpty() || _isLoading.value) return
         
-        val conversationId = _currentConversationId.value
-        
         viewModelScope.launch {
             _isLoading.value = true
             _inputText.value = ""
             
-            // 如果没有当前对话，创建一个新的
-            val currentConvId = conversationId ?: run {
-                val newConv = Conversation(title = text.take(30))
-                conversationDao.insertConversation(newConv)
+            val convId = _currentConversationId.value ?: run {
+                conversationDao.insertConversation(Conversation(title = text.take(30)))
             }
             
-            // 保存用户消息
-            val userMessage = Message(
-                conversationId = currentConvId,
-                content = text,
-                role = MessageRole.USER
-            )
-            messageDao.insertMessage(userMessage)
+            messageDao.insertMessage(Message(conversationId = convId, content = text, role = MessageRole.USER))
             
-            // 获取当前配置
             val config = settingsRepository.modelConfig.first()
+            val allMessages = messageDao.getMessagesByConversation(convId).first()
+            val result = chatRepository.sendMessageSimple(allMessages, config)
             
-            // 获取所有消息作为上下文
-            val allMessages = messageDao.getMessagesByConversation(currentConvId).first()
-            
-            // 发送到 API
-            val result = chatRepository.sendMessageSimple(
-                messages = allMessages,
-                config = config
-            )
-            
-            // 保存 AI 响应
             result.onSuccess { content ->
-                val assistantMessage = Message(
-                    conversationId = currentConvId,
-                    content = content,
-                    role = MessageRole.ASSISTANT
-                )
-                messageDao.insertMessage(assistantMessage)
-                
-                // 更新对话标题
-                val conv = conversationDao.getConversationById(currentConvId)
-                if (conv != null && conv.title == "新对话") {
-                    conversationDao.updateConversation(conv.copy(title = text.take(30)))
-                }
+                messageDao.insertMessage(Message(conversationId = convId, content = content, role = MessageRole.ASSISTANT))
             }
             
             _isLoading.value = false
@@ -148,12 +107,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     
     // ========== 任务方法 ==========
     
-    fun saveTask(task: ScheduledTask) {
+    fun saveTask(task: Task) {
         viewModelScope.launch {
             if (task.id == 0L) {
                 val id = taskDao.insertTask(task)
-                val newTask = task.copy(id = id)
-                app.taskScheduler?.scheduleTask(newTask)
+                app.taskScheduler?.scheduleTask(task.copy(id = id))
             } else {
                 taskDao.updateTask(task)
                 app.taskScheduler?.scheduleTask(task)
@@ -161,29 +119,45 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
     
-    fun toggleTask(task: ScheduledTask) {
+    fun toggleTask(task: Task) {
         viewModelScope.launch {
-            val newStatus = if (task.status == TaskStatus.ACTIVE) {
-                TaskStatus.PAUSED
-            } else {
-                TaskStatus.ACTIVE
+            val newStatus = when (task.status) {
+                TaskStatus.ACTIVE -> TaskStatus.PAUSED
+                else -> TaskStatus.ACTIVE
             }
-            val updatedTask = task.copy(status = newStatus)
-            taskDao.updateTask(updatedTask)
+            val updated = task.copy(status = newStatus)
+            taskDao.updateTask(updated)
             
-            if (newStatus == TaskStatus.ACTIVE) {
-                app.taskScheduler?.scheduleTask(updatedTask)
-            } else {
-                app.taskScheduler?.cancelTask(updatedTask)
-            }
+            if (newStatus == TaskStatus.ACTIVE) app.taskScheduler?.scheduleTask(updated)
+            else app.taskScheduler?.cancelTask(updated)
         }
     }
     
-    fun deleteTask(task: ScheduledTask) {
+    fun deleteTask(task: Task) {
         viewModelScope.launch {
             app.taskScheduler?.cancelTask(task)
             taskDao.deleteTask(task)
             taskExecutionDao.deleteExecutionsByTask(task.id)
+        }
+    }
+    
+    // 快速创建任务（从输入框）
+    fun quickCreateTask(input: String) {
+        viewModelScope.launch {
+            // 简单解析：默认创建一次性任务
+            val calendar = Calendar.getInstance()
+            calendar.add(Calendar.HOUR_OF_DAY, 1) // 默认1小时后
+            
+            val task = Task(
+                title = input.take(30),
+                prompt = input,
+                type = TaskType.ONE_TIME,
+                scheduledTime = calendar.timeInMillis,
+                source = "quick"
+            )
+            
+            val id = taskDao.insertTask(task)
+            app.taskScheduler?.scheduleTask(task.copy(id = id))
         }
     }
 }

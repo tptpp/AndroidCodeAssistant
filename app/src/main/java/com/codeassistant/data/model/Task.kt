@@ -4,85 +4,58 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import java.util.Calendar
 
-// 定时任务频率
-enum class ScheduleFrequency {
-    ONCE,       // 一次性
-    DAILY,      // 每天
-    WEEKLY,     // 每周
-    HOURLY,     // 每小时
-    CUSTOM      // 自定义 cron
+// 任务类型
+enum class TaskType {
+    SCHEDULED,  // 定时任务
+    ONE_TIME    // 一次性任务
 }
 
 // 任务状态
 enum class TaskStatus {
     ACTIVE,     // 启用
     PAUSED,     // 暂停
+    COMPLETED,  // 已完成（一次性任务）
     DISABLED    // 禁用
 }
 
-// 定时任务
-@Entity(tableName = "scheduled_tasks")
-data class ScheduledTask(
+// 执行频率（仅定时任务）
+enum class ScheduleFrequency {
+    DAILY,      // 每天
+    WEEKLY,     // 每周
+    HOURLY,     // 每小时
+}
+
+// 任务
+@Entity(tableName = "tasks")
+data class Task(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
-    val name: String,                           // 任务名称
-    val prompt: String,                         // 要执行的提示词
-    val frequency: ScheduleFrequency,           // 频率
-    val hour: Int,                              // 执行时间 - 小时
-    val minute: Int,                            // 执行时间 - 分钟
-    val daysOfWeek: String = "",                // 周几执行 (1-7, 逗号分隔)
-    val cronExpression: String = "",            // 自定义 cron 表达式
-    val status: TaskStatus = TaskStatus.ACTIVE, // 状态
-    val lastRunAt: Long? = null,                // 上次执行时间
-    val nextRunAt: Long? = null,                // 下次执行时间
+    val title: String,                          // 任务标题
+    val prompt: String,                         // 执行内容
+    val type: TaskType,                         // 类型
+    val frequency: ScheduleFrequency? = null,   // 频率（定时任务）
+    val scheduledTime: Long,                    // 执行时间戳
+    val daysOfWeek: String = "",                // 周几（周任务）
+    val status: TaskStatus = TaskStatus.ACTIVE,
+    val lastRunAt: Long? = null,
+    val nextRunAt: Long? = null,
     val createdAt: Long = System.currentTimeMillis(),
-    val updatedAt: Long = System.currentTimeMillis()
+    val source: String = "manual"               // 来源：manual/dialog
 ) {
-    // 计算下次执行时间
-    fun calculateNextRunTime(): Long {
-        val calendar = Calendar.getInstance()
-        calendar.set(Calendar.HOUR_OF_DAY, hour)
-        calendar.set(Calendar.MINUTE, minute)
-        calendar.set(Calendar.SECOND, 0)
-        calendar.set(Calendar.MILLISECOND, 0)
-        
-        val now = System.currentTimeMillis()
-        
-        when (frequency) {
-            ScheduleFrequency.ONCE -> {
-                if (calendar.timeInMillis <= now) {
-                    // 如果时间已过，设为明天
-                    calendar.add(Calendar.DAY_OF_MONTH, 1)
-                }
-            }
-            ScheduleFrequency.DAILY -> {
-                while (calendar.timeInMillis <= now) {
-                    calendar.add(Calendar.DAY_OF_MONTH, 1)
-                }
-            }
-            ScheduleFrequency.WEEKLY -> {
-                val days = daysOfWeek.split(",").mapNotNull { it.toIntOrNull() }
-                if (days.isNotEmpty()) {
-                    while (calendar.timeInMillis <= now || 
-                           !days.contains(calendar.get(Calendar.DAY_OF_WEEK))) {
-                        calendar.add(Calendar.DAY_OF_MONTH, 1)
-                    }
-                }
-            }
-            ScheduleFrequency.HOURLY -> {
-                while (calendar.timeInMillis <= now) {
-                    calendar.add(Calendar.HOUR_OF_DAY, 1)
-                }
-            }
-            ScheduleFrequency.CUSTOM -> {
-                // 自定义 cron 暂时按小时处理
-                while (calendar.timeInMillis <= now) {
-                    calendar.add(Calendar.HOUR_OF_DAY, 1)
-                }
-            }
-        }
-        
-        return calendar.timeInMillis
+    fun getDisplayTime(): String {
+        val cal = Calendar.getInstance()
+        cal.timeInMillis = scheduledTime
+        return String.format("%02d:%02d", 
+            cal.get(Calendar.HOUR_OF_DAY), 
+            cal.get(Calendar.MINUTE))
+    }
+    
+    fun getDisplayDate(): String {
+        val cal = Calendar.getInstance()
+        cal.timeInMillis = scheduledTime
+        return String.format("%02d/%02d",
+            cal.get(Calendar.MONTH) + 1,
+            cal.get(Calendar.DAY_OF_MONTH))
     }
 }
 
@@ -91,11 +64,11 @@ data class ScheduledTask(
 data class TaskExecution(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
-    val taskId: Long,                           // 任务ID
-    val taskName: String,                       // 任务名称（快照）
-    val executedAt: Long = System.currentTimeMillis(), // 执行时间
-    val prompt: String,                         // 发送的提示词
-    val response: String,                       // AI 响应
-    val success: Boolean,                       // 是否成功
-    val errorMessage: String? = null            // 错误信息
+    val taskId: Long,
+    val taskTitle: String,
+    val executedAt: Long = System.currentTimeMillis(),
+    val prompt: String,
+    val response: String,
+    val success: Boolean,
+    val errorMessage: String? = null
 )

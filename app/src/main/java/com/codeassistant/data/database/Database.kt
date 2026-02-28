@@ -8,10 +8,10 @@ import com.codeassistant.data.model.*
     entities = [
         Message::class,
         Conversation::class,
-        ScheduledTask::class,
+        Task::class,
         TaskExecution::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
