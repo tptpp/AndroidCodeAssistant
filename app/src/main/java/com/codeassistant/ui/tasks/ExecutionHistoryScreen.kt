@@ -65,6 +65,7 @@ fun ExecutionHistoryScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExecutionCard(
     execution: TaskExecution,

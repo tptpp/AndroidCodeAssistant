@@ -70,13 +70,13 @@ data class StreamDelta(
 interface ChatApiService {
     @POST("chat/completions")
     @Headers("Content-Type: application/json")
-    suspend fun chat(@Body request: ChatRequest): ChatResponse
-    
+    suspend fun chat(@Body request: ChatRequest): retrofit2.Response<ChatResponse>
+
     @POST("chat/completions")
     @Headers("Content-Type: application/json")
     @Streaming
     suspend fun chatStream(@Body request: ChatRequest): ResponseBody
-    
+
     @GET("models")
     suspend fun listModels(): ModelsResponse
 }
